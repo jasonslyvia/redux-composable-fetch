@@ -1,0 +1,46 @@
+{
+  "name": "redux-composable-fetch",
+  "version": "0.1.0",
+  "description": "A fetch middleware with extensible and opt-in functionalities like cache or log for Redux",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jasonslyvia/redux-composable-fetch.git"
+  },
+  "keywords": [
+    "redux",
+    "fetch",
+    "fetch-middleware",
+    "redux-fetch"
+  ],
+  "author": "jasonslyvia <jasonslyvia@gmail.com> (http://undefinedblog.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jasonslyvia/redux-composable-fetch/issues"
+  },
+  "homepage": "https://github.com/jasonslyvia/redux-composable-fetch#readme",
+  "devDependencies": {
+    "babel-core": "^6.9.0",
+    "babel-eslint": "^6.0.4",
+    "babel-loader": "^6.2.4",
+    "babel-preset-es2015": "^6.9.0",
+    "babel-preset-react": "^6.5.0",
+    "babel-preset-stage-0": "^6.5.0",
+    "eslint": "^2.10.2",
+    "eslint-config-airbnb": "^9.0.1",
+    "eslint-plugin-import": "^1.8.0",
+    "eslint-plugin-jsx-a11y": "^1.2.2",
+    "eslint-plugin-react": "^5.1.1",
+    "webpack": "^1.13.1",
+    "webpack-dev-server": "^1.14.1"
+  },
+  "dependencies": {
+    "fetch": "^1.0.1",
+    "fetch-detector": "^1.0.0",
+    "fetch-ie8": "^1.4.2",
+    "lodash": "^4.12.0",
+  }
+}

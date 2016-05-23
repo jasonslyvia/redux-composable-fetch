@@ -1,0 +1,10 @@
+{
+  "extends": "eslint-config-airbnb",
+  "parser": "babel-eslint",
+  "rules": {
+    "max-len": [1, 120],
+    "no-shadow": 0,
+    "no-confusing-arrow": 0,
+    "no-console": 0
+  }
+}
