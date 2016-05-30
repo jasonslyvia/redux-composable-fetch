@@ -1,6 +1,6 @@
 {
   "name": "redux-composable-fetch",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A fetch middleware with extensible and opt-in functionalities like cache or log for Redux",
   "main": "lib/index.js",
   "scripts": {
