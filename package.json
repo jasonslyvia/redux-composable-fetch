@@ -7,6 +7,7 @@
     "test": "npm run lint && mocha test/**/*.spec.js --compilers js:babel-register",
     "test:watch": "npm run test -- --watch",
     "coverage": "npm run lint && babel-node node_modules/.bin/isparta cover --root src/ --report text --report html node_modules/.bin/_mocha -- test/**/*.spec.js --compilers js:babel-register",
+    "travis": "npm run coverage && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls.js",
     "build": "npm run lint && babel src/ --out-dir lib/",
     "lint": "eslint src/"
   },
@@ -36,6 +37,7 @@
     "babel-register": "^6.9.0",
     "chai": "^3.5.0",
     "chai-spies": "^0.7.1",
+    "coveralls": "^2.11.9",
     "eslint": "^2.10.2",
     "eslint-config-airbnb": "^9.0.1",
     "eslint-plugin-import": "^1.8.0",
