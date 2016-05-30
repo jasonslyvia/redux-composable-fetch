@@ -7,3 +7,31 @@
 ## How it works
 
 ![redux composable fetch](http://ww1.sinaimg.cn/mw690/831e9385gw1f4a3fqyg13j20bx0ioabu.jpg)
+
+## Usage
+
+```bash
+$ npm install -S redux-composable-fetch
+```
+
+`redux-composable-fetch` provides a factory method `createFetchMiddleware` and a utility function `applyFetchMiddleware`, here's how you will use them:
+
+```javascript
+import { applyMiddleware, createStore, compose } from 'redux';
+import createFetchMiddleware, { applyFetchMiddleware } from 'redux-composable-fetch';
+
+// import all your middlewares for `fetch`, you will see what is a `middleware for fetch` in the following content
+import cacheMiddleware from './cacheMiddleware';
+import logMiddleware from './logMiddleware';
+
+// build our final fetch middleware first
+const finalFetchMiddleware = applyFetchMiddleware(
+  cacheMiddleware,
+  logMiddleware,
+);
+
+// then it's all redux thingy
+const finalCreateStore = compose(
+  applyMiddleware(finalFetchMiddleware)
+)(createStore);
+```
