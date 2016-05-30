@@ -317,7 +317,7 @@ describe('fetch middleware', () => {
       });
     });
 
-    it('should log error if `beforeFetch` resolve an object without `action` or `result` key', () => {
+    it('should log error if `afterFetch` resolve an object without `action` or `result` key', () => {
       const middlewareOfMiddleware = {
         afterFetch({ action }) {
           return Promise.resolve({ crzay: action });
@@ -329,7 +329,7 @@ describe('fetch middleware', () => {
 
       return middleware()(noop)(targetAction).then(e => Promise.reject(e), () => {
         try {
-          expect(global.console.error).to.have.been.calledWithMatch(/key/)
+          expect(global.console.error).to.have.been.calledWithMatch(/key/);
           global.console.error = prevError;
         } catch (e) {
           return Promise.reject(e);
