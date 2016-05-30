@@ -3,7 +3,7 @@
  * @param  {...object}  middlewares
  * @return {object}
  */
-export default function applyFetchMiddleware(...middlewares) {
+export function applyFetchMiddleware(...middlewares) {
   return {
     beforeFetch({ action }) {
       return middlewares.reduce((chain, middleware) => {
