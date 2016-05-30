@@ -3,7 +3,7 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 const expect = chai.expect;
 chai.use(sinonChai);
-import applyFetchMiddleware from '../../src/applyFetchMiddleware';
+import { applyFetchMiddleware } from '../../src/applyFetchMiddleware';
 
 
 describe('applyFetchMiddleware', () => {
