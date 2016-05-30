@@ -146,4 +146,4 @@ export default function createFetchMiddleware(options = {}) {
   };
 }
 
-export * from './applyFetchMiddleware';
+export { applyFetchMiddleware } from './applyFetchMiddleware';
