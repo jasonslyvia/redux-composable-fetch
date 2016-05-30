@@ -1,42 +1,28 @@
-import { fetchSimple } from './utils/fetch';
-
 const defaultBeforeFetch = ({ action }) => Promise.resolve({ action });
 const defaultAfterFetch = ({ action, result }) => Promise.resolve({ action, result });
-const rejectHandler = ({ error }) => Promise.reject({ error });
+const rejectHandler = ({ action, error }) => Promise.reject({ action, error });
 
-const normalizeAction = action => action.meta ? { ...action, ...action.meta } : action;
+function hasOwn(obj, ...properties) {
+  return properties.every(p => obj.hasOwnProperty(p));
+}
 
 /**
- * Create a new fetch middleware
+ * Create a fetch middleware
  *
- * Target `action` object contains `url` AND `types` field
- *
- *
- * @param {object} options
- *   @param {function} beforeFetch Hook before sending request, it should return a Promise
- *   @param {function} afterFetch  Hook after response, it should return a Promise
- *   @param {function} onReject    Hook for exceptions, usually useless, but built-in cache middleware used it to
- *                                 determine a cache hit, it can return a Promise
-  * @return {function}     A brand new fetch-middleware for Redux, note this middleware will return a Promise
-  *                        which you can take advantage of, a detailed demo has been documented in docs.
-  *
-  *                        Example usage:
-  *                          import { appleMiddleware } from 'redux';
-  *                          import createFetchMiddleware, { applyFetchMiddleware } from 'redux-composable-fetch';
-  *
-  *                          appleMiddleware(createFetchMiddleware(applyFetchMiddleware(middleware1, middleware2)));
+ * @param {object} options Options for creating fetch middleware
+ *   @param  {function} beforeFetch Injection point before sending request, it should return a Promise
+ *   @param  {function} afterFetch  Injection point after receive response, it should return a Promise
+ *   @param  {function} onReject    Injection point when anything goes wrong, it should return a Promise
+ * @return {function}
  */
 export default function createFetchMiddleware(options = {}) {
   const { beforeFetch = defaultBeforeFetch, afterFetch = defaultAfterFetch, onReject = rejectHandler } = options;
   return () => next => action => {
-    // Be compatible with FSA
-    if (action.meta && (typeof action.meta.url !== 'string' || !Array.isArray(action.meta.types))) {
-      return next(action);
-    } else if (!action.url || !action.types) {
+    if (!action.url || !action.types) {
       return next(action);
     }
 
-    const [loadingType, successType, failureType] = normalizeAction(action).types;
+    const [loadingType, successType, failureType] = action.types;
 
     if (loadingType) {
       try {
@@ -45,99 +31,117 @@ export default function createFetchMiddleware(options = {}) {
           type: loadingType,
         });
       } catch (err) {
-        console.error(`[redux-composable-fetch] Uncaught error during dispatching ${loadingType}`, err.stack);
+        console.error(`[fetch-middleware] Uncaught error while dispatching \`${loadingType}\`\n`, err.stack);
       }
     }
 
-    return beforeFetch({ action })
-    .then(({ action }) => {
-      const { url, params, method, timeout, credentials } = normalizeAction(action);
-      return fetchSimple(url, params, method, timeout, credentials);
-    })
-    .then(result => afterFetch({ action, result }))
-    .catch(err => {
-      if (err.stack) {
-        return Promise.reject(err);
-      }
+    let beforeFetchResult;
+    try {
+      beforeFetchResult = beforeFetch({ action });
+    } catch (err) {
+      throw new Error('[fetch-middleware] Uncaught error in `beforeFetch` middleware', err.stack);
+    }
 
-      // Built-in timeout support
-      if (err === 'request timeout') {
+    if (!(beforeFetchResult instanceof Promise)) {
+      throw new TypeError('[fetch-middleware] `beforeFetch` middleware returned a non-Promise object, instead got:',
+                          beforeFetchResult);
+    }
+
+    return beforeFetchResult
+    .then(args => {
+      if (!args || typeof args !== 'object' || !hasOwn(args, 'action')) {
+        console.error('[fetch-middleware] `beforeFetch` should resolve an object containing `action` key, instead got:',
+                      args);
+        return Promise.reject(args);
+      }
+      return args;
+    })
+    .then(
+      ({ action }) => {
+        const { url, init } = action;
+        return fetch(url, init).then(
+          result => {
+            return Promise.resolve({
+              action,
+              result,
+            });
+          },
+          err => {
+            return Promise.reject({
+              action,
+              error: err,
+            });
+          }
+        );
+      }
+    )
+    .then(
+      ({ action, result }) => {
+        let afterFetchResult;
+        try {
+          afterFetchResult = afterFetch({ action, result });
+        } catch (err) {
+          console.error('[fetch-middleware] Uncaught error in `afterFetch` middleware\n', err.stack);
+        }
+
+        if (!(afterFetchResult instanceof Promise)) {
+          console.error('[fetch-middleware] `afterFetch` middleware returned a non-Promise object');
+          return Promise.reject();
+        }
+
+        return afterFetchResult;
+      }
+    )
+    .then(args => {
+      if (!args || typeof args !== 'object' || !hasOwn(args, 'action', 'result')) {
+        console.error('[fetch-middleware] `afterFetch` should resolve an object ' +
+                      'containing `action` and `result` key, instead got',
+                      args);
+        return Promise.reject(args);
+      }
+      return args;
+    })
+    .catch(err => {
+      if (err instanceof Error || typeof err !== 'object' || !hasOwn(err, 'action', 'error')) {
         return onReject({
           action,
           error: err,
         });
       }
 
-      return onReject({
-        action: err.action,
-        error: err.error,
-      });
+      return onReject(err);
     })
-    .then(({ result, action }) => {
-      try {
-        next({
-          ...action,
-          payload: result,
-          type: successType,
-        });
-      } catch (err) {
-        console.error(`[redux-composable-fetch] Uncaught error during dispatching ${successType}`, err.stack);
-      }
-
-      // Allow dirty but efficient direct result access
-      return Promise.resolve(result);
-    })
-    .catch(e => {
-      if (e && e.stack) {
-        console.error(e && e.stack);
-        return Promise.reject(e);
-      }
-
-      if (failureType) {
-        next({
-          ...action,
-          type: failureType,
-        });
-      }
-
-      return Promise.reject(e);
-    });
-  };
-}
-
-
-/**
- * Utility function, compose multiple hooks, works like `appleMiddleware` in Redux
- * @param  {...object}  middlewares
- * @return {object}
- */
-export function applyFetchMiddleware(...middlewares) {
-  return {
-    beforeFetch({ action }) {
-      return middlewares.reduce((chain, middleware) => {
-        if (typeof middleware.beforeFetch === 'function') {
-          return chain.then(({ action }) => middleware.beforeFetch({ action }));
+    .then(
+      ({ action, result }) => {
+        try {
+          next({
+            ...action,
+            payload: result,
+            type: successType,
+          });
+        } catch (err) {
+          console.error(`[fetch-middleware] Uncaught error while dispatching \`${successType}\`\n`, err.stack);
         }
-        return chain;
-      }, Promise.resolve({ action }));
-    },
 
-    afterFetch({ action, result }) {
-      return middlewares.reduce((chain, middleware) => {
-        if (typeof middleware.afterFetch === 'function') {
-          return chain.then(({ action, result }) => middleware.afterFetch({ action, result }));
+        return Promise.resolve(result);
+      }
+    )
+    .catch(
+      ({ action, error }) => {
+        if (failureType) {
+          try {
+            next({
+              ...action,
+              type: failureType,
+              error,
+            });
+          } catch (err) {
+            console.error(`[fetch-middleware] Uncaught error while dispatching \`${failureType}\`\n`, err.stack);
+          }
         }
-        return chain;
-      }, Promise.resolve({ action, result }));
-    },
 
-    onReject({ action, error }) {
-      return middlewares.reduce((chain, middleware) => {
-        if (typeof middleware.onReject === 'function') {
-          return chain.catch(({ action, error }) => middleware.onReject({ action, error }));
-        }
-        return chain;
-      }, Promise.reject({ action, error }));
-    },
+        return Promise.reject(error);
+      }
+    );
   };
 }
