@@ -15,7 +15,7 @@ function hasOwn(obj, ...properties) {
  *   @param  {function} onReject    Injection point when anything goes wrong, it should return a Promise
  * @return {function}
  */
-export default function createFetchMiddleware(options = {}) {
+module.exports = exports.default = function createFetchMiddleware(options = {}) {
   const { beforeFetch = defaultBeforeFetch, afterFetch = defaultAfterFetch, onReject = rejectHandler } = options;
   return () => next => action => {
     if (!action.url || !action.types) {
@@ -144,4 +144,6 @@ export default function createFetchMiddleware(options = {}) {
       }
     );
   };
-}
+};
+
+exports.applyFetchMiddleware = require('./applyFetchMiddleware');
