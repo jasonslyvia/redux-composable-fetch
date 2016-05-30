@@ -58,8 +58,8 @@ export default function createFetchMiddleware(options = {}) {
     })
     .then(
       ({ action }) => {
-        const { url, init } = action;
-        return fetch(url, init).then(
+        const { url, types, ...options } = action; // eslint-disable-line
+        return fetch(url, options).then(
           result => {
             return Promise.resolve({
               action,
