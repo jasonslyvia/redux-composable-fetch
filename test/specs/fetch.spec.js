@@ -23,11 +23,25 @@ const targetAction = {
   types: ['LOADING', 'SUCCESS', 'ERROR'],
 };
 
+function spyConsoleError() {
+  global.console.error = sinon.spy(global.console, 'error');
+  return function restore() {
+    global.console.error.restore();
+  };
+}
+
 
 /* =============================
          SETUP COMPLETE
 ============================= */
+let restore;
+beforeEach(() => {
+  restore = spyConsoleError();
+});
 
+afterEach(() => {
+  restore();
+});
 
 describe('fetch middleware', () => {
   describe('basic setup', () => {
@@ -61,6 +75,22 @@ describe('fetch middleware', () => {
     it('should return a promise', () => {
       const middleware = createFetchMiddleware();
       expect(middleware()(noop)(targetAction)).to.be.an.instanceOf(Promise);
+    });
+
+    it('should not return a rejected promise when anything wrong but `failureType` is provided', () => {
+      const middleware = createFetchMiddleware();
+      return middleware()(noop)(targetAction);
+    });
+
+    it('should return a rejected promise when anything wrong and no `failureType` provided', () => {
+      const middleware = createFetchMiddleware();
+
+      // make `fetch` reject
+      global.fetch = genFakeFetch({}, true);
+      return middleware()(noop)({
+        ...targetAction,
+        types: [null, 'SUCCESS', null],
+      }).then(() => Promise.reject('THIS SHOULD NOT BE CALLED'), () => Promise.resolve());
     });
 
     it('should dispatch `LOADING` and `SUCCESS` type if specified when everything okay', () => {
@@ -100,6 +130,7 @@ describe('fetch middleware', () => {
         name: 'Jon',
       };
 
+      // `fetch` will return a rejected promise
       global.fetch = genFakeFetch(result, true);
       const promise = middleware()(next)(targetAction);
 
@@ -109,12 +140,10 @@ describe('fetch middleware', () => {
       });
 
       return promise.then(() => {
-        throw new Error('THIS SHOULD NOT BE CALLED');
-      }, err => {
         try {
           expect(next).to.have.been.calledWith({
             ...targetAction,
-            error: err,
+            error: result,
             type: 'ERROR',
           });
         } catch (e) {
@@ -187,13 +216,10 @@ describe('fetch middleware', () => {
         },
       };
       const middleware = createFetchMiddleware(middlewareOfMiddleware);
-      const prevError = global.console.error;
-      global.console.error = sinon.spy();
 
-      return middleware()(noop)(targetAction).then(e => Promise.reject(e), () => {
+      return middleware()(noop)(targetAction).then(() => {
         try {
           expect(global.console.error).to.have.been.calledWithMatch(/key/);
-          global.console.error = prevError;
         } catch (e) {
           return Promise.reject(e);
         }
@@ -234,9 +260,6 @@ describe('fetch middleware', () => {
       const middleware = createFetchMiddleware(middlewareOfMiddleware);
 
       return middleware()(noop)(targetAction).then(
-        () => {
-          return Promise.reject();
-        },
         () => {
           try {
             expect(global.fetch).to.not.have.been.called;
@@ -282,13 +305,10 @@ describe('fetch middleware', () => {
         },
       };
       const middleware = createFetchMiddleware(middlewareOfMiddleware);
-      const prevError = global.console.error;
-      global.console.error = sinon.spy(global.console, 'error');
 
       return middleware()(noop)(targetAction).then(null, () => {
         try {
           expect(global.console.error).to.have.been.calledWithMatch(/non-Promise/);
-          global.console.error = prevError;
         } catch (e) {
           return Promise.reject(e);
         }
@@ -303,13 +323,10 @@ describe('fetch middleware', () => {
         },
       };
       const middleware = createFetchMiddleware(middlewareOfMiddleware);
-      const prevError = global.console.error;
-      global.console.error = sinon.spy(global.console, 'error');
 
       return middleware()(noop)(targetAction).then(null, () => {
         try {
           expect(global.console.error).to.have.been.calledWithMatch(/Uncaught/, /ReferenceError/);
-          global.console.error = prevError;
         } catch (e) {
           return Promise.reject(e);
         }
@@ -324,13 +341,10 @@ describe('fetch middleware', () => {
         },
       };
       const middleware = createFetchMiddleware(middlewareOfMiddleware);
-      const prevError = global.console.error;
-      global.console.error = sinon.spy();
 
-      return middleware()(noop)(targetAction).then(e => Promise.reject(e), () => {
+      return middleware()(noop)(targetAction).then(() => {
         try {
           expect(global.console.error).to.have.been.calledWithMatch(/key/);
-          global.console.error = prevError;
         } catch (e) {
           return Promise.reject(e);
         }
@@ -524,8 +538,6 @@ describe('fetch middleware', () => {
       };
 
       global.fetch = genFakeFetch(result);
-      const prevError = global.console.error;
-      global.console.error = sinon.spy();
       const promise = middleware()(next)(targetAction);
 
       expect(next).to.have.been.calledWith({
@@ -541,10 +553,7 @@ describe('fetch middleware', () => {
             type: 'SUCCESS',
           });
           expect(global.console.error).to.have.been.calledWithMatch(/Uncaught/, /blah/);
-
-          global.console.error = prevError;
         } catch (err) {
-          global.console.error = prevError;
           return Promise.reject(err);
         }
 
@@ -564,17 +573,12 @@ describe('fetch middleware', () => {
       };
 
       global.fetch = genFakeFetch(result, true);
-      const prevError = global.console.error;
-      global.console.error = sinon.spy();
       const promise = middleware()(next)(targetAction);
 
-      return promise.then(d => Promise.reject(d), () => {
+      return promise.then(() => {
         try {
           expect(global.console.error).to.have.been.calledWithMatch(/Uncaught/, /blah/);
-
-          global.console.error = prevError;
         } catch (err) {
-          global.console.error = prevError;
           return Promise.reject(err);
         }
 
