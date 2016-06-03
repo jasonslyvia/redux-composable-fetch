@@ -138,9 +138,11 @@ export default function createFetchMiddleware(options = {}) {
           } catch (err) {
             console.error(`[fetch-middleware] Uncaught error while dispatching \`${failureType}\`\n`, err.stack);
           }
+        } else {
+          // only reject when no `failureType` is provided, which means errors
+          // are probably not handled in reducer
+          return Promise.reject(error);
         }
-
-        return Promise.reject(error);
       }
     );
   };
