@@ -6,20 +6,27 @@ function hasOwn(obj, ...properties) {
   return properties.every(p => obj.hasOwnProperty(p));
 }
 
+function noop() {}
+
 /**
  * Create a fetch middleware
  *
- * @param {object} options Options for creating fetch middleware
+ * @param {object} options     Options for creating fetch middleware
  *   @param  {function} beforeFetch Injection point before sending request, it should return a Promise
  *   @param  {function} afterFetch  Injection point after receive response, it should return a Promise
  *   @param  {function} onReject    Injection point when anything goes wrong, it should return a Promise
+ * @param {bool}   promiseMode Enable promise mode, will not check action have certain keys
  * @return {function}
  */
-export default function createFetchMiddleware(options = {}) {
+export default function createFetchMiddleware(options = {}, promiseMode = false) {
   const { beforeFetch = defaultBeforeFetch, afterFetch = defaultAfterFetch, onReject = rejectHandler } = options;
-  return () => next => action => {
-    if (!action.url || !action.types) {
+  return () => (next = noop) => action => {
+    if (!promiseMode && (!action.url || !action.types)) {
       return next(action);
+    }
+
+    if (promiseMode && !action.url) {
+      throw new Error('[fetch-middleware] Missing required key: `url`');
     }
 
     const [loadingType, successType, failureType] = action.types;
