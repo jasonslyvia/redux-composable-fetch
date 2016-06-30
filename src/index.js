@@ -29,7 +29,13 @@ export default function createFetchMiddleware(options = {}, promiseMode = false)
       throw new Error('[fetch-middleware] Missing required key: `url`');
     }
 
-    const [loadingType, successType, failureType] = action.types;
+    let loadingType;
+    let successType;
+    let failureType;
+
+    if (!promiseMode) {
+      [loadingType, successType, failureType] = action.types;
+    }
 
     if (loadingType) {
       try {
