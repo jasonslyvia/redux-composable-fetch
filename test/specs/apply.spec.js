@@ -12,6 +12,22 @@ describe('applyFetchMiddleware', () => {
   let middleware3;
   let middleware4;
 
+  function spyConsoleWarning() {
+    global.console.warn = sinon.spy(global.console, 'warn');
+    return function restore() {
+      global.console.warn.restore();
+    };
+  }
+
+  let restore;
+  beforeEach(() => {
+    restore = spyConsoleWarning();
+  });
+
+  afterEach(() => {
+    restore();
+  });
+
   beforeEach(() => {
     middleware1 = {
       beforeFetch({ action }) {
@@ -243,5 +259,29 @@ describe('applyFetchMiddleware', () => {
       }
       return Promise.resolve();
     });
+  });
+
+  it('should warn if multiple `onResolve` are provided and only first one is respected', () => {
+    const m1 = {
+      onResolve() {
+
+      },
+    };
+    const m2 = {
+      onResolve() {
+
+      },
+    };
+
+    const onResolve1 = sinon.spy(m1, 'onResolve');
+    const onResolve2 = sinon.spy(m2, 'onResolve');
+
+    const finalMiddleware = applyFetchMiddleware(
+      m1, m2,
+    );
+
+    finalMiddleware.onResolve({});
+
+    expect(global.console.warn).to.have.been.calledWithMatch(/onResolve/);
   });
 });

@@ -114,6 +114,7 @@ describe('fetch middleware', () => {
             ...targetAction,
             payload: data,
             type: 'SUCCESS',
+            error: false,
           });
         } catch (err) {
           return Promise.reject(err);
@@ -143,7 +144,8 @@ describe('fetch middleware', () => {
         try {
           expect(next).to.have.been.calledWith({
             ...targetAction,
-            error: result,
+            error: true,
+            payload: result,
             type: 'ERROR',
           });
         } catch (e) {
@@ -380,6 +382,52 @@ describe('fetch middleware', () => {
     });
   });
 
+  describe('on resolve', () => {
+    it('should be able to modify the shape of `action` before being dispatched', () => {
+      const middlewareOfMiddleware = {
+        onResolve({ action, type, payload, error }) {
+          return {
+            ...action,
+            type,
+            payload,
+            error,
+            touched: true,
+          };
+        },
+      };
+
+      const middleware = createFetchMiddleware(middlewareOfMiddleware);
+      const next = sinon.spy();
+      const result = {
+        name: 'Jon',
+      };
+
+      global.fetch = genFakeFetch(result);
+      const promise = middleware()(next)(targetAction);
+
+      expect(next).to.have.been.calledWith({
+        ...targetAction,
+        type: 'LOADING',
+      });
+
+      return promise.then(data => {
+        try {
+          expect(next).to.have.been.calledWith({
+            ...targetAction,
+            payload: data,
+            type: 'SUCCESS',
+            error: false,
+            touched: true,
+          });
+        } catch (err) {
+          return Promise.reject(err);
+        }
+
+        return Promise.resolve();
+      }, err => Promise.reject(err));
+    });
+  });
+
   describe('fetch flow', () => {
     it('when `beforeFetch` reject, no `fetch` call, no `afterFetch`, only `onReject` should be called', () => {
       global.fetch = sinon.spy(genFakeFetch());
@@ -551,6 +599,7 @@ describe('fetch middleware', () => {
             ...targetAction,
             payload: data,
             type: 'SUCCESS',
+            error: false,
           });
           expect(global.console.error).to.have.been.calledWithMatch(/Uncaught/, /blah/);
         } catch (err) {

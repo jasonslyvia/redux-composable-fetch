@@ -1,6 +1,9 @@
 const defaultBeforeFetch = ({ action }) => Promise.resolve({ action });
 const defaultAfterFetch = ({ action, result }) => Promise.resolve({ action, result });
 const rejectHandler = ({ action, error }) => Promise.reject({ action, error });
+// For unify the action being dispatched, you might NOT need it!
+// `result` might be the payload or the error, depending how the request end up
+const resolveHandler = ({ action, type, payload, error }) => ({ ...action, type, payload, error });
 
 function hasOwn(obj, ...properties) {
   return properties.every(p => obj.hasOwnProperty(p));
@@ -19,7 +22,13 @@ function noop() {}
  * @return {function}
  */
 export default function createFetchMiddleware(options = {}, promiseMode = false) {
-  const { beforeFetch = defaultBeforeFetch, afterFetch = defaultAfterFetch, onReject = rejectHandler } = options;
+  const {
+    beforeFetch = defaultBeforeFetch,
+    afterFetch = defaultAfterFetch,
+    onReject = rejectHandler,
+    onResolve = resolveHandler,
+  } = options;
+
   return () => (next = noop) => action => {
     if (!promiseMode && (!action.url || !action.types)) {
       return next(action);
@@ -127,11 +136,12 @@ export default function createFetchMiddleware(options = {}, promiseMode = false)
     .then(
       ({ action, result }) => {
         try {
-          next({
-            ...action,
-            payload: result,
+          next(onResolve({
+            action,
             type: successType,
-          });
+            payload: result,
+            error: false,
+          }));
         } catch (err) {
           console.error(`[fetch-middleware] Uncaught error while dispatching \`${successType}\`\n`, err.stack);
         }
@@ -143,11 +153,12 @@ export default function createFetchMiddleware(options = {}, promiseMode = false)
       ({ action, error }) => {
         if (failureType) {
           try {
-            next({
-              ...action,
+            next(onResolve({
+              action,
               type: failureType,
-              error,
-            });
+              payload: error,
+              error: true,
+            }));
           } catch (err) {
             console.error(`[fetch-middleware] Uncaught error while dispatching \`${failureType}\`\n`, err.stack);
           }
