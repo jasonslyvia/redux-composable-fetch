@@ -264,7 +264,6 @@ describe('applyFetchMiddleware', () => {
   it('should warn if multiple `onResolve` are provided and only first one is respected', () => {
     const m1 = {
       onResolve() {
-
       },
     };
     const m2 = {
@@ -280,8 +279,10 @@ describe('applyFetchMiddleware', () => {
       m1, m2,
     );
 
-    finalMiddleware.onResolve({});
+    finalMiddleware.onResolve({})();
 
     expect(global.console.warn).to.have.been.calledWithMatch(/onResolve/);
+    expect(onResolve1).to.be.called.once;
+    expect(onResolve2).not.to.be.called;
   });
 });
