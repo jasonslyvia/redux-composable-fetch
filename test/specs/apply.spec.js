@@ -279,7 +279,7 @@ describe('applyFetchMiddleware', () => {
       m1, m2,
     );
 
-    finalMiddleware.onResolve({})();
+    finalMiddleware.onResolve({});
 
     expect(global.console.warn).to.have.been.calledWithMatch(/onResolve/);
     expect(onResolve1).to.be.called.once;

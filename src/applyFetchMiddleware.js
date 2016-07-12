@@ -40,7 +40,7 @@ export function applyFetchMiddleware(...middlewares) {
       }
 
       return middlewaresWithOnResolve[0] ?
-             middlewaresWithOnResolve[0].onResolve.bind(null, { action, type, payload, error }) :
+             middlewaresWithOnResolve[0].onResolve.call(null, { action, type, payload, error }) :
              undefined;
     },
   };
