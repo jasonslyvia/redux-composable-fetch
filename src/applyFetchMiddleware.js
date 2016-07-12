@@ -4,6 +4,12 @@
  * @return {object}
  */
 export function applyFetchMiddleware(...middlewares) {
+  const middlewaresWithOnResolve = middlewares.filter(m => typeof m.onResolve === 'function');
+  if (middlewaresWithOnResolve.length > 1) {
+    console.warn('[fetch-middleware] Only one single `onResolve` handler is supported, but you provided %d',
+                  middlewaresWithOnResolve.length);
+  }
+
   return {
     beforeFetch({ action }) {
       return middlewares.reduce((chain, middleware) => {
@@ -32,16 +38,8 @@ export function applyFetchMiddleware(...middlewares) {
       }, Promise.reject({ action, error }));
     },
 
-    onResolve({ action, type, payload, error }) {
-      const middlewaresWithOnResolve = middlewares.filter(m => typeof m.onResolve === 'function');
-      if (middlewaresWithOnResolve.length > 1) {
-        console.warn('[fetch-middleware] Only one single `onResolve` handler is supported, but you provided %d',
-                      middlewaresWithOnResolve.length);
-      }
-
-      return middlewaresWithOnResolve[0] ?
-             middlewaresWithOnResolve[0].onResolve.call(null, { action, type, payload, error }) :
-             undefined;
-    },
+    onResolve: middlewaresWithOnResolve[0] ?
+               middlewaresWithOnResolve[0].onResolve :
+               undefined,
   };
 }
