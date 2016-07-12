@@ -135,15 +135,17 @@ export default function createFetchMiddleware(options = {}, promiseMode = false)
     })
     .then(
       ({ action, result }) => {
-        try {
-          next(onResolve({
-            action,
-            type: successType,
-            payload: result,
-            error: false,
-          }));
-        } catch (err) {
-          console.error(`[fetch-middleware] Uncaught error while dispatching \`${successType}\`\n`, err.stack);
+        if (successType) {
+          try {
+            next(onResolve({
+              action,
+              type: successType,
+              payload: result,
+              error: false,
+            }));
+          } catch (err) {
+            console.error(`[fetch-middleware] Uncaught error while dispatching \`${successType}\`\n`, err.stack);
+          }
         }
 
         return Promise.resolve(result);
