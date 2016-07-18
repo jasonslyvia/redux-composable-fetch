@@ -93,6 +93,15 @@ describe('fetch middleware', () => {
       }).then(() => Promise.reject('THIS SHOULD NOT BE CALLED'), () => Promise.resolve());
     });
 
+
+    it('should return a rejected promise when anything wrong and `failureType` provided and `rejectHard` set to true', () => {
+      const middleware = createFetchMiddleware(undefined, { rejectHard: true });
+
+      // make `fetch` reject
+      global.fetch = genFakeFetch({}, true);
+      return middleware()(noop)(targetAction).then(() => Promise.reject('THIS SHOULD NOT BE CALLED'), () => Promise.resolve());
+    });
+
     it('should dispatch `LOADING` and `SUCCESS` type if specified when everything okay', () => {
       const middleware = createFetchMiddleware();
       const next = sinon.spy();

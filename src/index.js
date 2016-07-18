@@ -18,10 +18,18 @@ function noop() {}
  *   @param  {function} beforeFetch Injection point before sending request, it should return a Promise
  *   @param  {function} afterFetch  Injection point after receive response, it should return a Promise
  *   @param  {function} onReject    Injection point when anything goes wrong, it should return a Promise
- * @param {bool}   promiseMode Enable promise mode, will not check action have certain keys
+ * @param {object} config      Miscellaneous configuration
  * @return {function}
  */
-export default function createFetchMiddleware(options = {}, promiseMode = false) {
+export default function createFetchMiddleware(options = {}, config = {}) {
+  const finalConfig = { ...config };
+  // Be compatible with previous API
+  if (typeof config === 'boolean') {
+    finalConfig.promiseMode = config;
+  }
+
+  const { promiseMode = false, rejectHard = false } = finalConfig;
+
   const {
     beforeFetch = defaultBeforeFetch,
     afterFetch = defaultAfterFetch,
@@ -153,6 +161,8 @@ export default function createFetchMiddleware(options = {}, promiseMode = false)
     )
     .catch(
       ({ action, error }) => {
+        // By default, final `catch` will resolve silently with `undefiend`
+        // since we assume all related logoic has been taken care of in reducers
         if (failureType) {
           try {
             next(onResolve({
@@ -164,9 +174,11 @@ export default function createFetchMiddleware(options = {}, promiseMode = false)
           } catch (err) {
             console.error(`[fetch-middleware] Uncaught error while dispatching \`${failureType}\`\n`, err.stack);
           }
-        } else {
-          // only reject when no `failureType` is provided, which means errors
-          // are probably not handled in reducer
+        }
+
+        // But you can force reject by setting `config.rejectHard` to true,
+        // if you'd like to make use of this promise directly
+        if (!failureType || rejectHard) {
           return Promise.reject(error);
         }
       }
