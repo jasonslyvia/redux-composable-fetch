@@ -1,3 +1,5 @@
+import jsonpFetch from './jsonpFetch';
+
 const defaultBeforeFetch = ({ action }) => Promise.resolve({ action });
 const defaultAfterFetch = ({ action, result }) => Promise.resolve({ action, result });
 const rejectHandler = ({ action, error }) => Promise.reject({ action, error });
@@ -88,8 +90,8 @@ export default function createFetchMiddleware(options = {}, config = {}) {
     })
     .then(
       ({ action }) => {
-        const { url, types, ...options } = action; // eslint-disable-line
-        return fetch(url, options).then(
+        const { url, types, useJsonp, ...options } = action; // eslint-disable-line
+        return (useJsonp ? jsonpFetch(url, options) : fetch(url, options)).then(
           result => {
             return Promise.resolve({
               action,
